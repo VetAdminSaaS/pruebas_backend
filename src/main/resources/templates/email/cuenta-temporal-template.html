@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐾 Activación de Cuenta - VetCare 🐾</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border: 4px solid #ff9800;
+            margin: 0 auto;
+        }
+        h2 {
+            color: #ff5722;
+            font-size: 26px;
+            margin-bottom: 15px;
+        }
+        p {
+            color: #333;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .highlight {
+            color: #ff5722;
+            font-weight: bold;
+        }
+        .button {
+            display: inline-block;
+            background-color: #ff9800;
+            color: white;
+            padding: 14px 28px;
+            margin: 25px 0;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        .button:hover {
+            background-color: #e68900;
+            transform: scale(1.05);
+        }
+        .info-box {
+            background-color: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #ff9800;
+            text-align: left;
+        }
+        .info-box p {
+            margin: 5px 0;
+            font-size: 15px;
+        }
+        .info-box code {
+            font-size: 14px;
+            font-weight: bold;
+            color: #d84315;
+            background-color: #ffe0b2;
+            padding: 5px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .paw {
+            font-size: 22px;
+            color: #ff9800;
+            margin: 15px 0;
+        }
+        .footer {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #666;
+        }
+        .logo {
+            width: 120px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <img class="logo" th:src="@{https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHG0dDt9JOHsVuNKkSZyoNS7QKjd7xqfdyYA&s}" alt="Logo VetCare">
+
+    <h2>🐾 ¡Hola, <span th:text="${nombre}"></span> <span th:text="${apellido}"></span>! 🐾</h2>
+    <p>¡Gracias por unirte a <span class="highlight">VetCare</span>! 🏥🐶🐱</p>
+    <p>Tu cuenta temporal ha sido creada con éxito. Aquí tienes tus datos de acceso:</p>
+
+    <div class="info-box">
+        <p><strong>📧 Email de acceso:</strong> <br> <code th:text="${usuarioEmail}"></code></p>
+        <p><strong>🔑 Contraseña temporal:</strong> <br> <code th:text="${tempPassword}"></code></p>
+    </div>
+
+    <p>Para activar tu cuenta y establecer una nueva contraseña, haz clic en el siguiente botón:</p>
+
+    <a th:href="${verificationLink}" class="button">Activar Cuenta</a>
+
+    <p>Si no solicitaste esta cuenta, puedes ignorar este mensaje.</p>
+
+    <p class="paw">🐾 ¡Gracias por confiar en nosotros! 🐾</p>
+
+    <div class="footer">
+        <p>Este es un mensaje automático de <strong>VetCare</strong>. No respondas a este correo.</p>
+        <p>¿Necesitas ayuda? Contáctanos en <a href="mailto:soporte@vetcare.com" style="color: #ff9800;">soporte@vetcare.com</a></p>
+    </div>
+</div>
+</body>
+</html>

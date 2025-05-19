@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta charset="UTF-8" />
+    <title>Confirmación de Compra</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* GLOBAL STYLES */
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #333;
+        }
+        img {
+            border: none;
+            max-width: 100%;
+        }
+        table {
+            border-collapse: separate;
+            width: 100%;
+            margin: 20px 0;
+        }
+        table td, table th {
+            vertical-align: top;
+            padding: 8px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        table th {
+            background-color: #1abc9c;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* CONTAINER */
+        .container {
+            display: block;
+            max-width: 700px;
+            padding: 30px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        }
+        .content {
+            padding: 30px;
+            background-color: #ffffff;
+        }
+
+        /* HEADER */
+        h1 {
+            font-size: 28px;
+            color: #2c3e50;
+            text-align: center;
+        }
+        p {
+            margin: 0 0 15px;
+        }
+        a {
+            color: #1abc9c;
+            text-decoration: none;
+        }
+
+        /* BUTTON */
+        .btn-primary {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 40px;
+        }
+        .btn-primary a {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #1abc9c;
+            color: #ffffff;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary a:hover {
+            background-color: #16a085;
+        }
+
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #95a5a6;
+        }
+        .footer a {
+            color: #95a5a6;
+        }
+        h1 {
+            font-size: 28px;
+            color: #2c3e50;
+            text-align: center;
+        }
+        .status-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .status {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            transition: 0.3s;
+        }
+        .status img {
+            width: 50px;
+            height: 50px;
+        }
+
+        .status .paso {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .estado-pedido {
+            font-size: 14px;
+            color: #555;
+        }
+
+        .active {
+            color:   #1abc9c;
+            font-weight: bold;
+        }
+
+
+        .status .material-icons {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            padding: 10px;
+            background-color: #ebebeb;
+
+        }
+        .titulo{
+            text-align: start;
+            margin-bottom: 30px;
+        }
+        .paso{
+            margin-top: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Barlow', arial,sans-serif;
+            text-align: center;
+
+        }
+        .status.active .status-icon {
+            background-color: #1abc9c;
+            color: white;
+        }
+        .saludo{
+            font-weight: bold;
+            font-family: 'Poppins', sans-serif;
+        }
+        .informacion{
+            font-family: 'Poppins', sans-serif;
+        }
+        .mensaje-informativo{
+            justify-content: center;
+            margin: 20px 20px;
+            background: rgb(255, 254, 224);
+            border: 1px dashed #ffd419;
+            padding: 10px;
+        }
+
+
+        /* RESPONSIVE STYLES */
+        @media only screen and (max-width: 620px) {
+            .container {
+                width: 100% !important;
+                padding: 15px !important;
+            }
+            h1 {
+                font-size: 22px !important;
+            }
+            .btn-primary a {
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<table role="presentation" >
+    <tr>
+        <td>
+            <div class="content container" >
+
+                <!-- Header -->
+                <h1>¡Gracias por tu compra en Veterinaria Amigos!</h1>
+                <p class="saludo">Hola, <span th:text="${nombre}"></span>,</p>
+                <p class="informacion">Queremos agradecerte por elegirnos para el cuidado de tu mascota. Nos alegra informarte que tu compra ha sido confirmada y estamos preparando tu pedido con dedicación.</p>
+                <p class="informacion">A continuación, encontrarás los detalles de tu compra. Si tienes alguna consulta, no dudes en contactarnos. ¡Esperamos que disfrutes tu pedido y que tu mascota esté feliz y saludable!</p>
+
+                <!--Pasos de compra -->
+                <table width="100%" align="center" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 600px; margin: auto;">
+                    <tr>
+                        <td align="center" style="padding: 10px;">
+                            <strong style="font-size: 30px; font-family: Arial, sans-serif; color: #1abc9c;">Pasos de tu compra</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                            <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                                <tr>
+                                    <!-- Paso 1 -->
+                                    <td align="center" style="padding: 10px;">
+                                        <img src="https://i.postimg.cc/zDCtncPH/history-40dp-1-ABC9-C-FILL0-wght400-GRAD0-opsz40.png" width="50" alt="Compra Recibida">
+                                        <p style="font-size: 24px; font-weight: bold; color: #1abc9c; margin: 5px 0; font-family: 'Barlow',arial,sans-serif; ">Paso 1</p>
+                                        <p style="font-size: 20px; color: #1abc9c; font-weight: bold; font-family: 'Barlow',Arial,sans-serif;">Compra Recibida</p>
+                                    </td>
+
+                                    <!-- Paso 2 -->
+                                    <td align="center" style="padding: 10px;">
+                                        <img src="https://i.postimg.cc/zG66dRwy/inventory-40dp-BABABABA-FILL0-wght400-GRAD0-opsz40.png" width="50" alt="Compra Confirmada">
+                                        <p style="font-size: 24px; color: #bbb; margin: 5px 0; font-weight: bold; font-family: 'Barlow',arial,sans-serif;">Paso 2</p>
+                                        <p style="font-size: 20px; color: #7a7979; font-weight: 200; font-family: 'Barlow',Arial,sans-serif;">Compra Confirmada</p>
+                                    </td>
+
+                                    <!-- Paso 3 -->
+                                    <td align="center" style="padding: 10px;">
+                                        <img src="https://i.postimg.cc/kXDSnV8M/shopping-bag-40dp-BABABABA-FILL0-wght400-GRAD0-opsz40.png" width="50" alt="Compra Lista">
+                                        <p style="font-size: 24px; color: #bbb; margin: 5px 0; font-weight: bold;font-family: 'Barlow',arial,sans-serif;">Paso 3</p>
+                                        <p style="font-size: 20px; color: #7a7979; font-weight: 200; font-family: 'Barlow',Arial,sans-serif;">Compra Lista</p>
+                                    </td>
+
+                                    <!-- Paso 4 -->
+                                    <td align="center" style="padding: 10px;">
+                                        <img src="https://i.postimg.cc/MZ3crWLC/local-shipping-40dp-BABABABA-FILL0-wght400-GRAD0-opsz40.png" width="50" alt="Compra Entregada">
+                                        <p style="font-size: 24px; color: #bbb; margin: 5px 0;font-family: 'Barlow',Arial,sans-serif; font-weight: bold;">Paso 4</p>
+                                        <p style="font-size: 20px; color: #7a7979;font-weight: 200; font-family: 'Barlow',Arial,sans-serif;">Compra Entregada</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <div class="mensaje-informativo">
+                    <span th:if="${entrega == 'Retiro en Tienda'}">Recibirás un correo cuando tu compra esté lista para retirar.</span>
+                    <span th:if="${entrega == 'Despacho a Domicilio'}">Tu pedido será enviado a la siguiente dirección: <strong th:text="${direccionEnvio}"></strong>.</span>
+                </div>
+
+
+
+
+
+
+
+                <!-- Order Details -->
+                <table>
+                    <tr>
+
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                    </tr>
+                    <tr th:each="item : ${items}">
+
+                        <td th:text="${item.name}"></td>
+                        <td th:text="${item.quantity}"></td>
+                        <td>S/.<span th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 2)}"></span></td>
+
+                    </tr>
+                </table>
+                <p><strong>Total de la compra:</strong> S/.<span th:text="${total}"></span></p>
+
+                <!-- Button to View Order -->
+
+
+                <p class="informacion">Gracias por confiar en nosotros. ¡Esperamos que disfrutes de tu compra y que tu mascota esté feliz y saludable!</p>
+                <p>Atentamente,<br/> El equipo de Veterinaria Amigos</p>
+
+                <!-- Footer -->
+                <div class="footer">
+                    <p>Trujillo, Perú</p>
+                    <p>
+                        <a href="#">Síguenos en redes sociales</a> |
+                        <a href="#">Contáctanos</a>
+                    </p>
+                    <p>
+                        <a href="#">© 2025 Veterinaria Amigos</a>.
+                    </p>
+                </div>
+
+            </div>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

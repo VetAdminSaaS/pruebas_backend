@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta charset="UTF-8" />
+    <title>Confirmación de Factura</title>
+    <style>
+        /* GLOBAL STYLES */
+        body {
+            background-color: #f4f7fc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4a4a4a;
+        }
+        img {
+            border: none;
+            max-width: 100%;
+        }
+        table {
+            border-collapse: separate;
+            width: 100%;
+            margin: 20px 0;
+        }
+        table td, table th {
+            vertical-align: top;
+            padding: 12px 20px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        table th {
+            background-color: #2980b9;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* CONTAINER */
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .content {
+            padding: 30px;
+            background-color: #ffffff;
+        }
+
+        /* HEADER */
+        h1 {
+            font-size: 32px;
+            color: #2980b9;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        p {
+            margin: 0 0 15px;
+            font-size: 16px;
+        }
+        a {
+            color: #2980b9;
+            text-decoration: none;
+        }
+
+        /* BUTTON */
+        .btn-primary {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .btn-primary a {
+            display: inline-block;
+            padding: 14px 40px;
+            background-color: #2980b9;
+            color: #ffffff;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            margin-bottom:20px ;
+        }
+        .btn-primary a:hover {
+            background-color: #1d6fa5;
+        }
+
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #95a5a6;
+        }
+        .footer a {
+            color: #95a5a6;
+        }
+
+        /* RESPONSIVE STYLES */
+        @media only screen and (max-width: 620px) {
+            .container {
+                width: 100% !important;
+                padding: 15px !important;
+            }
+            h1 {
+                font-size: 26px !important;
+            }
+            .btn-primary a {
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<table role="presentation" class="container">
+    <tr>
+        <td>
+            <div class="content">
+
+                <!-- Header -->
+                <h1>Factura Generada</h1>
+                <p>Estimado(a) <span th:text="${usuario}"></span>,</p>
+                <p>Nos complace informarle que hemos procesado su compra con éxito y hemos generado la factura correspondiente. A continuación, encontrará todos los detalles relacionados con su factura.</p>
+
+                <!-- Invoice Number (centered large) -->
+                <h2 style="text-align:center; font-size: 42px; color: #2980b9; font-weight: bold;">Factura No. <span th:text="${number}"></span></h2>
+
+                <!-- Order Details -->
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unitario</th>
+                        <th>Subtotal</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${items}">
+                        <td th:text="${item.name}"></td>
+                        <td th:text="${item.quantity}"></td>
+                        <td>S/.<span th:text="${#numbers.formatDecimal(item.price, 2, 2)}"></span></td>
+                        <td>S/.<span th:text="${#numbers.formatDecimal(item.price * item.quantity, 2, 2)}"></span></td>
+
+                    </tr>
+                    </tbody>
+                </table>
+                <p style="font-size: 18px; font-weight: bold;">Total de la factura: <span style="color: #2980b9;">S/.<span th:text="${total}"></span></span></p>
+
+                <!-- Button to View Invoice -->
+                <div class="btn-primary">
+                    <a th:href="${public_url}">Ver detalles completos de la factura</a>
+                </div>
+
+                <p>Si tiene alguna pregunta o necesita asistencia adicional con respecto a su factura, no dude en ponerse en contacto con nuestro equipo de atención al cliente.</p>
+                <p>Gracias por elegir Veterinaria Amigos. Esperamos poder seguir atendiéndole.</p>
+                <p>Atentamente,<br/> El equipo de Veterinaria Amigos</p>
+
+                <!-- Footer -->
+                <div class="footer">
+                    <p>Trujillo, Perú</p>
+                    <p>
+                        <a href="#">Síguenos en redes sociales</a> |
+                        <a href="#">Contáctanos</a>
+                    </p>
+                    <p>
+                        <a href="#">© 2025 Veterinaria Amigos</a>.
+                    </p>
+                </div>
+
+            </div>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
