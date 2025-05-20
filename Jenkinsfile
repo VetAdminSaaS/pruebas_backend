@@ -15,7 +15,8 @@ pipeline {
         stage('Build JAR') {
             steps {
                 // Usar gradlew.bat para Windows
-                bat 'gradlew.bat build'
+                bat 'gradle build'
+
             }
         }
         stage('Build Docker Image') {
