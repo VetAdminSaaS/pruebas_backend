@@ -25,7 +25,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
+                    def dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
         }
@@ -43,9 +43,9 @@ pipeline {
         stage('Push Image to ECR') {
             steps {
                 script {
-                    // Push usando docker nativo, sin docker.withRegistry
-                    dockerImage.push()
-                    dockerImage.push('latest')
+
+                    def dockerImage.push()
+                    def dockerImage.push('latest')
                 }
             }
         }
