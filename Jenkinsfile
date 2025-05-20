@@ -1,14 +1,17 @@
 pipeline {
     agent any
+
     environment {
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '478039852035.dkr.ecr.us-east-1.amazonaws.com'
         ECR_REPO = 'eccomerceveterinariasanfrancisco-backend'
         IMAGE_TAG = "${env.GIT_COMMIT.take(7)}"
     }
+
     tools {
         maven 'Maven 3'
     }
+
     stages {
         stage('Checkout') {
             steps {
@@ -61,16 +64,17 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    bat """
-                        aws eks update-kubeconfig --region ${AWS_REGION} --name eccomerceveterinariasanfrancisco --kubeconfig %WORKSPACE%\\.kube\\config && ^
+                    bat '''
+                        aws eks update-kubeconfig --region us-east-1 --name eccomerceveterinariasanfrancisco --kubeconfig %WORKSPACE%\\.kube\\config && ^
                         set KUBECONFIG=%WORKSPACE%\\.kube\\config && ^
                         kubectl get nodes && ^
-                        kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
-                    """
+                        kubectl set image deployment/backend-deployment backend-container=%ECR_REGISTRY%/%ECR_REPO%:%IMAGE_TAG% -n default
+                    '''
                 }
             }
         }
     }
+
     post {
         failure {
             echo 'El pipeline falló.'
