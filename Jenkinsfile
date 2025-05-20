@@ -14,8 +14,10 @@ pipeline {
         }
 
         stage('Build JAR') {
+            tools {
+                maven 'Maven 3'
+            }
             steps {
-                // Compilar el proyecto con Maven (asegúrate de que mvn esté en el PATH)
                 bat 'mvn clean package -DskipTests'
             }
         }
