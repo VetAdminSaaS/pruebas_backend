@@ -72,4 +72,12 @@ pipeline {
             echo 'El pipeline se ejecutó correctamente.'
         }
     }
+    stage('Check AWS Identity') {
+        steps {
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+                bat 'aws sts get-caller-identity'
+            }
+        }
+    }
+
 }
