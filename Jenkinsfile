@@ -1,17 +1,14 @@
 pipeline {
     agent any
-
     environment {
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '478039852035.dkr.ecr.us-east-1.amazonaws.com'
         ECR_REPO = 'eccomerceveterinariasanfrancisco-backend'
         IMAGE_TAG = "${env.GIT_COMMIT.take(7)}"
     }
-
     tools {
         maven 'Maven 3'
     }
-
     stages {
         stage('Checkout') {
             steps {
@@ -36,9 +33,7 @@ pipeline {
         stage('Login to AWS ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    bat """
-                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                    """
+                    bat "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
                 }
             }
         }
@@ -73,8 +68,7 @@ pipeline {
                 }
             }
         }
-
-
+    }
     post {
         failure {
             echo 'El pipeline falló.'
