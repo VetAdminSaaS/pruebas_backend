@@ -64,16 +64,16 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    bat '''
-                        aws eks update-kubeconfig --region us-east-1 --name eccomerceveterinariasanfrancisco --kubeconfig %WORKSPACE%\\.kube\\config && ^
-                        set KUBECONFIG=%WORKSPACE%\\.kube\\config && ^
-                        kubectl get nodes && ^
-                        kubectl set image deployment/backend-deployment backend-container=%ECR_REGISTRY%/%ECR_REPO%:%IMAGE_TAG% -n default
-                    '''
+                    script {
+                        def kubeConfigPath = "${env.WORKSPACE}\\.kube\\config"
+                        bat "aws eks update-kubeconfig --region ${AWS_REGION} --name eccomerceveterinariasanfrancisco --kubeconfig ${kubeConfigPath}"
+                        bat "set KUBECONFIG=${kubeConfigPath} && kubectl get nodes"
+                        bat "set KUBECONFIG=${kubeConfigPath} && kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default"
+                    }
                 }
             }
         }
-    }
+
 
     post {
         failure {
