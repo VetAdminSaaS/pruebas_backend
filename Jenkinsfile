@@ -5,7 +5,7 @@ pipeline {
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '478039852035.dkr.ecr.us-east-1.amazonaws.com'
         ECR_REPO = 'eccomerceveterinariasanfrancisco-backend'
-        IMAGE_TAG = "${env.GIT_COMMIT}"
+        IMAGE_TAG = "${env.GIT_COMMIT.take(7)}"
     }
 
     stages {
@@ -18,6 +18,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+
                     docker.build("${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
@@ -27,7 +28,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                     '''
                 }
             }
@@ -38,6 +39,8 @@ pipeline {
                 script {
                     docker.withRegistry("https://${ECR_REGISTRY}", 'aws-credentials-id') {
                         docker.image("${ECR_REPO}:${IMAGE_TAG}").push()
+
+                        docker.image("${ECR_REPO}:${IMAGE_TAG}").push('latest')
                     }
                 }
             }
@@ -47,6 +50,7 @@ pipeline {
             steps {
                 script {
                     sh '''
+                    kubectl config use-context your-eks-context-name
                     kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
                     '''
                 }
