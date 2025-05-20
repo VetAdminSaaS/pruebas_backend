@@ -43,10 +43,9 @@ pipeline {
         stage('Push Image to ECR') {
             steps {
                 script {
-                    docker.withRegistry("https://${ECR_REGISTRY}", 'SanFranciscoAWS') {
-                        dockerImage.push()
-                        dockerImage.push('latest')
-                    }
+                    // Push usando docker nativo, sin docker.withRegistry
+                    dockerImage.push()
+                    dockerImage.push('latest')
                 }
             }
         }
