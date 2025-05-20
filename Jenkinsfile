@@ -14,7 +14,7 @@ pipeline {
         }
         stage('Build JAR') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'mvn clean package'
             }
         }
         stage('Build Docker Image') {
