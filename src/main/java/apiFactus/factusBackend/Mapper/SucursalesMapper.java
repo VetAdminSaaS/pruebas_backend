@@ -8,6 +8,7 @@ import apiFactus.factusBackend.Repository.ServiciosVeterinariosRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -23,11 +24,11 @@ public class SucursalesMapper {
     public SucursalesDTO toDTO(Sucursales sucursal) {
         SucursalesDTO dto = modelMapper.map(sucursal, SucursalesDTO.class);
         if (sucursal.getServiciosVeterinarios() != null) {
-            dto.setServiciosVeterinariosIds(
-                    sucursal.getServiciosVeterinarios().stream()
-                            .map(ServiciosVeterinarios::getId)
-                            .collect(Collectors.toList()).reversed()
-            );
+            List<Long> ids = sucursal.getServiciosVeterinarios().stream()
+                    .map(ServiciosVeterinarios::getId)
+                    .collect(Collectors.toList());
+            Collections.reverse(ids);
+            dto.setServiciosVeterinariosIds(ids);
         }
         return dto;
     }

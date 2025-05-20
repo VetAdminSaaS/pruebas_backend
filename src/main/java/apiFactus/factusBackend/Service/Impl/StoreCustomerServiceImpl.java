@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,12 +51,16 @@ public class StoreCustomerServiceImpl implements StoreService {
     @Transactional(readOnly = true)
     @Override
     public List<UserProfileDTO> findAll() {
-        return usuarioRepository.findAll()
+        List<UserProfileDTO> list = usuarioRepository.findAll()
                 .stream()
-                .filter(user -> user.getRole().getName().equals(ERole.CUSTOMER)) // Filtrar por rol
+                .filter(user -> user.getRole().getName().equals(ERole.CUSTOMER))
                 .map(userMapper::toUserProfileDTO)
-                .collect(Collectors.toList()).reversed();
+                .collect(Collectors.toList());
+
+        Collections.reverse(list); // Invertir el orden
+        return list;
     }
+
     @Override
     public List<PurchaseDTO> getLastSixPaidPurchasesByAuthenticatedUser(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
