@@ -25,7 +25,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Construir la imagen y asignarla a una variable local solo en este bloque
                     dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
@@ -44,10 +43,17 @@ pipeline {
         stage('Push Image to ECR') {
             steps {
                 script {
-                    // Obtener la referencia a la imagen con docker.image() porque la variable no persiste entre etapas
                     def dockerImage = docker.image("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
                     dockerImage.push()
                     dockerImage.push('latest')
+                }
+            }
+        }
+
+        stage('Check AWS Identity') {           // <---- Mueve este stage aquí
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+                    bat 'aws sts get-caller-identity'
                 }
             }
         }
@@ -72,12 +78,4 @@ pipeline {
             echo 'El pipeline se ejecutó correctamente.'
         }
     }
-    stage('Check AWS Identity') {
-        steps {
-            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                bat 'aws sts get-caller-identity'
-            }
-        }
-    }
-
 }
