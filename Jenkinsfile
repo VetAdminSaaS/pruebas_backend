@@ -14,26 +14,30 @@ pipeline {
         }
         stage('Build JAR') {
             steps {
-                sh 'mvn clean package'
+                // Construye el archivo JAR de tu aplicación con Maven
+                sh 'mvn clean package -DskipTests'
             }
         }
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Construye la imagen Docker con etiqueta basada en el commit
                     docker.build("${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
         }
         stage('Login to AWS ECR') {
             steps {
+                // Inicia sesión en AWS ECR para poder subir imágenes
                 sh '''
-                    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                 '''
             }
         }
         stage('Push Image to ECR') {
             steps {
                 script {
+                    // Sube la imagen con la etiqueta específica y también como latest
                     docker.withRegistry("https://${ECR_REGISTRY}", 'aws-credentials-id') {
                         docker.image("${ECR_REPO}:${IMAGE_TAG}").push()
                         docker.image("${ECR_REPO}:${IMAGE_TAG}").push('latest')
@@ -43,9 +47,10 @@ pipeline {
         }
         stage('Deploy to EKS') {
             steps {
-                sh '''
+
+                sh """
                     kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
-                '''
+                """
             }
         }
     }
