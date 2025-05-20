@@ -6,6 +6,9 @@ pipeline {
         ECR_REPO = 'eccomerceveterinariasanfrancisco-backend'
         IMAGE_TAG = "${env.GIT_COMMIT.take(7)}"
     }
+    tools {
+        maven 'Maven 3'
+    }
     stages {
         stage('Checkout') {
             steps {
@@ -14,9 +17,6 @@ pipeline {
         }
 
         stage('Build JAR') {
-            tools {
-                maven 'Maven 3'
-            }
             steps {
                 bat 'mvn clean package -DskipTests'
             }
@@ -25,28 +25,27 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${ECR_REPO}:${IMAGE_TAG}")
+                    dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
         }
 
-       stage('Login to AWS ECR') {
-           steps {
-               withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                   bat '''
-                       aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 478039852035.dkr.ecr.us-east-1.amazonaws.com
-                   '''
-               }
-           }
-       }
-
+        stage('Login to AWS ECR') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+                    bat """
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                    """
+                }
+            }
+        }
 
         stage('Push Image to ECR') {
             steps {
                 script {
-                    docker.withRegistry("https://${ECR_REGISTRY}", 'aws-credentials-id') {
-                        docker.image("${ECR_REPO}:${IMAGE_TAG}").push()
-                        docker.image("${ECR_REPO}:${IMAGE_TAG}").push('latest')
+                    docker.withRegistry("https://${ECR_REGISTRY}", 'SanFranciscoAWS') {
+                        dockerImage.push()
+                        dockerImage.push('latest')
                     }
                 }
             }
@@ -55,7 +54,8 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 bat """
-                    kubectl set image deployment/backend-deployment backend-container=%ECR_REGISTRY%/%ECR_REPO%:%IMAGE_TAG% -n default
+                    aws eks update-kubeconfig --region ${AWS_REGION} --name SanFranciscoCluster
+                    kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
                 """
             }
         }
