@@ -14,21 +14,21 @@ pipeline {
         }
         stage('Build JAR') {
             steps {
-                // Construye el archivo JAR de tu aplicación con Maven
-                sh 'mvn clean package -DskipTests'
+
+                bat 'gradlew build'
             }
         }
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Construye la imagen Docker con etiqueta basada en el commit
+
                     docker.build("${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
         }
         stage('Login to AWS ECR') {
             steps {
-                // Inicia sesión en AWS ECR para poder subir imágenes
+
                 sh '''
                     aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                 '''
