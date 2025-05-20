@@ -52,17 +52,17 @@ pipeline {
             }
         }
 
-     stage('Deploy to EKS') {
-         steps {
-             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                 bat """
-                     aws eks update-kubeconfig --region ${AWS_REGION} --name SanFranciscoCluster
-                     kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
-                 """
-             }
-         }
-     }
-
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+                    bat """
+                        aws eks update-kubeconfig --region ${AWS_REGION} --name SanFranciscoCluster
+                        kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
+                    """
+                }
+            }
+        }
+    }
 
     post {
         failure {
