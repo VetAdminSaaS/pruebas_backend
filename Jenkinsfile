@@ -14,30 +14,28 @@ pipeline {
         }
         stage('Build JAR') {
             steps {
-
-                bat 'gradlew build'
+                // Usar gradlew.bat para Windows
+                bat 'gradlew.bat build'
             }
         }
         stage('Build Docker Image') {
             steps {
                 script {
-
                     docker.build("${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
         }
         stage('Login to AWS ECR') {
             steps {
-
-                sh '''
-                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                '''
+                // Login AWS ECR con comando batch para Windows
+                bat """
+                    aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %ECR_REGISTRY%
+                """
             }
         }
         stage('Push Image to ECR') {
             steps {
                 script {
-                    // Sube la imagen con la etiqueta específica y también como latest
                     docker.withRegistry("https://${ECR_REGISTRY}", 'aws-credentials-id') {
                         docker.image("${ECR_REPO}:${IMAGE_TAG}").push()
                         docker.image("${ECR_REPO}:${IMAGE_TAG}").push('latest')
@@ -47,9 +45,8 @@ pipeline {
         }
         stage('Deploy to EKS') {
             steps {
-
-                sh """
-                    kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
+                bat """
+                    kubectl set image deployment/backend-deployment backend-container=%ECR_REGISTRY%/%ECR_REPO%:%IMAGE_TAG% -n default
                 """
             }
         }
