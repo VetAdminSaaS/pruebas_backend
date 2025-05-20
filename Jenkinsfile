@@ -25,7 +25,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
+                    // Construir la imagen y asignarla a una variable local solo en este bloque
+                    dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
         }
@@ -43,9 +44,10 @@ pipeline {
         stage('Push Image to ECR') {
             steps {
                 script {
-
-                    def dockerImage.push()
-                    def dockerImage.push('latest')
+                    // Obtener la referencia a la imagen con docker.image() porque la variable no persiste entre etapas
+                    def dockerImage = docker.image("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
+                    dockerImage.push()
+                    dockerImage.push('latest')
                 }
             }
         }
