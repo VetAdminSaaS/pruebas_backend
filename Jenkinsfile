@@ -12,13 +12,14 @@ pipeline {
                 checkout scm
             }
         }
+
         stage('Build JAR') {
             steps {
-                // Usar gradlew.bat para Windows
-                bat 'gradle build'
-
+                // Compilar el proyecto con Maven (asegúrate de que mvn esté en el PATH)
+                bat 'mvn clean package -DskipTests'
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 script {
@@ -26,14 +27,15 @@ pipeline {
                 }
             }
         }
+
         stage('Login to AWS ECR') {
             steps {
-                // Login AWS ECR con comando batch para Windows
                 bat """
                     aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %ECR_REGISTRY%
                 """
             }
         }
+
         stage('Push Image to ECR') {
             steps {
                 script {
@@ -44,12 +46,22 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy to EKS') {
             steps {
                 bat """
                     kubectl set image deployment/backend-deployment backend-container=%ECR_REGISTRY%/%ECR_REPO%:%IMAGE_TAG% -n default
                 """
             }
+        }
+    }
+
+    post {
+        failure {
+            echo 'El pipeline falló.'
+        }
+        success {
+            echo 'El pipeline se ejecutó correctamente.'
         }
     }
 }
