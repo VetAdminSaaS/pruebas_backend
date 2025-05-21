@@ -54,9 +54,13 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
                     script {
                         def kubeConfigPath = "${env.WORKSPACE}\\.kube\\config"
-                        bat "aws eks update-kubeconfig --region ${AWS_REGION} --name eccomerceveterinariasanfrancisco --kubeconfig ${kubeConfigPath}"
-                        bat "set KUBECONFIG=${kubeConfigPath} && kubectl get nodes"
-                        bat "set KUBECONFIG=${kubeConfigPath} && kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default"
+                        bat """
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name eccomerceveterinariasanfrancisco --kubeconfig ${kubeConfigPath}
+                            mkdir C:\\Users\\jenkins\\.kube 2>NUL
+                            copy ${kubeConfigPath} C:\\Users\\jenkins\\.kube\\config
+                            kubectl get nodes
+                            kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
+                        """
                     }
                 }
             }
