@@ -71,7 +71,7 @@ pipeline {
     }
     post {
         failure {
-            echo 'El pipeline falló en algun lugar.'
+            echo 'El pipeline falló en algun lugar del proyecto.'
         }
         success {
             echo 'El pipeline se ejecutó correctamente.'
