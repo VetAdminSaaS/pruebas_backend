@@ -68,7 +68,7 @@ pipeline {
             echo 'El pipeline falló en algun lugar del proyecto.'
         }
         success {
-            echo 'El pipeline se ejecutó correctamente.'
+            echo 'El pipeline se ejecutó correctamente exitoso.'
         }
     }
 }
