@@ -25,18 +25,22 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Login to AWS ECR') {
             steps {
-                script {
-                    dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+                    // Workaround para Windows: se usa PowerShell para el login de Docker
+                    bat '''
+                    powershell -Command "$password = aws ecr get-login-password --region %AWS_REGION%; \
+                        docker login --username AWS --password $password %ECR_REGISTRY%"
+                    '''
                 }
             }
         }
 
-        stage('Login to AWS ECR') {
+        stage('Build Docker Image') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    bat "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
+                script {
+                    dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
                 }
             }
         }
@@ -53,34 +57,29 @@ pipeline {
         stage('Check AWS Identity') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    bat 'aws sts get-caller-identity'
+                    bat 'aws sts get-caller-identity --region %AWS_REGION%'
                 }
             }
         }
 
-        stage('Deploy to EKS') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    withEnv([
-                        "AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}",
-                        "AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}",
-                        "AWS_SESSION_TOKEN=${env.AWS_SESSION_TOKEN}"
-                    ]) {
-                        script {
-                            def kubeConfigPath = "${env.WORKSPACE}\\.kube\\config"
-                            bat """
-                                aws eks update-kubeconfig --region ${AWS_REGION} --name eccomerceveterinariasanfrancisco --kubeconfig ${kubeConfigPath}
-                                mkdir C:\\Users\\jenkins\\.kube 2>NUL
-                                copy ${kubeConfigPath} C:\\Users\\jenkins\\.kube\\config
-                                kubectl get nodes
-                                kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
-                            """
-                        }
-                    }
-                }
-            }
-        }
-    }
+ stage('Deploy to EKS') {
+     steps {
+         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+             script {
+                 def kubeConfigPath = "${env.WORKSPACE}\\.kube\\config"
+
+                 bat """
+                     aws eks update-kubeconfig --region ${AWS_REGION} --name eccomerceveterinariasanfrancisco --kubeconfig ${kubeConfigPath}
+                     mkdir C:\\Users\\jenkins\\.kube 2>NUL
+                     copy ${kubeConfigPath} C:\\Users\\jenkins\\.kube\\config
+                     kubectl get nodes
+                     kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default
+                 """
+             }
+         }
+     }
+ }
+
 
     post {
         failure {
