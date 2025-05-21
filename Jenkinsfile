@@ -15,13 +15,11 @@ pipeline {
                 checkout scm
             }
         }
-
         stage('Build JAR') {
             steps {
                 bat 'mvn clean package -DskipTests'
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
@@ -29,7 +27,6 @@ pipeline {
                 }
             }
         }
-
         stage('Login to AWS ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
@@ -37,7 +34,6 @@ pipeline {
                 }
             }
         }
-
         stage('Push Image to ECR') {
             steps {
                 script {
@@ -47,7 +43,6 @@ pipeline {
                 }
             }
         }
-
         stage('Check AWS Identity') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
@@ -55,7 +50,6 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy to EKS') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
