@@ -37,7 +37,6 @@ pipeline {
         stage('Push Image to ECR') {
             steps {
                 script {
-                    def dockerImage = docker.image("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
                     dockerImage.push()
                     dockerImage.push('latest')
                 }
@@ -65,10 +64,10 @@ pipeline {
     }
     post {
         failure {
-            echo 'El pipeline falló en algun lugar del proyecto.'
+            echo 'El pipeline falló en algún lugar del proyecto.'
         }
         success {
-            echo 'El pipeline se ejecutó correctamente exitoso.'
+            echo 'El pipeline se ejecutó correctamente.'
         }
     }
 }
