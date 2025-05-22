@@ -83,6 +83,12 @@ stage('Deploy to EKS') {
     }
 }
 }
+stage('Verificar Deployments') {
+  steps {
+    bat 'kubectl get deployments -n default'
+  }
+}
+
 
 
     post {
