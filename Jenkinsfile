@@ -28,7 +28,7 @@ pipeline {
         stage('Login to AWS ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    // Workaround para Windows: se usa PowerShell para el login de Docker
+
                     bat '''
                     powershell -Command "$password = aws ecr get-login-password --region %AWS_REGION%; \
                         docker login --username AWS --password $password %ECR_REGISTRY%"

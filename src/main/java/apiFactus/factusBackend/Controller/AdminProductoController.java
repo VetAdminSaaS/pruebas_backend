@@ -80,10 +80,10 @@ public class AdminProductoController {
         SucursalProductoResponseDTO response = productoService.getSucursalesPorProducto(productoId);
 
         if (response.getSucursales().isEmpty()) {
-            return ResponseEntity.noContent().build();
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(response); // Devuelve 200 OK
     }
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<List<ProductoDetailsDTO>> getCategorias(@PathVariable Integer categoryId) {

@@ -1,56 +1,51 @@
-package apiFactus.factusBackend;
-
+import apiFactus.factusBackend.Controller.AuthController;
 import apiFactus.factusBackend.Dto.AuthResponse;
 import apiFactus.factusBackend.Dto.LoginDTO;
+import apiFactus.factusBackend.Service.TokenReactivationService;
 import apiFactus.factusBackend.Service.UsuarioService;
+import jakarta.mail.MessagingException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.ResponseEntity;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-public class AuthControllerTest {
+class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockitoBean
     private UsuarioService usuarioService;
+    private TokenReactivationService tokenReactivationService;
+    private AuthController authController;
+
+    @BeforeEach
+    void setUp() {
+        usuarioService = mock(UsuarioService.class);
+        tokenReactivationService = mock(TokenReactivationService.class);
+        authController = new AuthController(usuarioService, tokenReactivationService);
+    }
 
     @Test
-    void testLoginEndpoint() throws Exception {
+    void testLogin_returnAuthResponse() throws MessagingException {
         // Arrange
-        AuthResponse authResponse = new AuthResponse();
-        authResponse.setNames("test@email.com");
-        authResponse.setToken("mocked-jwt-token");
+        LoginDTO loginDTO = new LoginDTO();
+        loginDTO.setEmail("cliente@vet.com");
+        loginDTO.setPassword("123456");
 
-        when(usuarioService.login(any())).thenReturn(authResponse);
+        AuthResponse expected = new AuthResponse();
+        expected.setToken("abc123token");
+        expected.setRole("ROLE_CLIENT");
+        expected.setNames("María Ruiz");
 
-        // Act & Assert
-        mockMvc.perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                                "email": "test@email.com",
-                                "password": "1234"
-                            }
-                        """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.names").value("test@email.com"))
-                .andExpect(jsonPath("$.token").value("mocked-jwt-token"));
-    }
-    void testLoginGoogleEndpoint() throws  Exception {
-        AuthResponse authResponse = new AuthResponse();
+        when(usuarioService.login(loginDTO)).thenReturn(expected);
 
+        // Act
+        ResponseEntity<AuthResponse> response = authController.login(loginDTO);
+
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertNotNull(response.getBody());
+        assertEquals("abc123token", response.getBody().getToken());
+        assertEquals("ROLE_CLIENT", response.getBody().getRole());
+        assertEquals("María Ruiz", response.getBody().getNames());
     }
 }

@@ -5,6 +5,8 @@ import io.jsonwebtoken.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,8 +14,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -24,6 +26,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import io.jsonwebtoken.SignatureAlgorithm;
+
 @Component
 @RequiredArgsConstructor
 public class TokenProvider {
@@ -31,47 +35,61 @@ public class TokenProvider {
     @Value("${jwt.validity-in-seconds}")
     private long jwtValidityInSeconds;
 
-    @Value("${jwt.private-key}")
+    @Value("${jwt.private-key}") // Ejemplo: "classpath:keys/private_key.pem"
     private String privateKeyPath;
 
-    @Value("${jwt.public-key}")
+    @Value("${jwt.public-key}")  // Ejemplo: "classpath:keys/public_key.pem"
     private String publicKeyPath;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
+    private final ResourceLoader resourceLoader;
+
     @PostConstruct
     public void init() {
         try {
-            this.privateKey = loadPrivateKey(privateKeyPath.replace("file:", ""));
-            this.publicKey = loadPublicKey(publicKeyPath.replace("file:", ""));
+            this.privateKey = loadPrivateKey(privateKeyPath);
+            this.publicKey = loadPublicKey(publicKeyPath);
         } catch (Exception e) {
-            throw new IllegalStateException("Error al cargar las claves RSA desde archivos", e);
+            throw new IllegalStateException("Error cargando claves RSA para JWT", e);
         }
     }
 
-    private PrivateKey loadPrivateKey(String filePath) throws Exception {
-        String key = new String(Files.readAllBytes(Paths.get(filePath)))
+    private PrivateKey loadPrivateKey(String resourcePath) throws Exception {
+        Resource resource = resourceLoader.getResource(resourcePath);
+        byte[] keyBytes = readAllBytes(resource);
+
+        String key = new String(keyBytes)
                 .replaceAll("-----BEGIN PRIVATE KEY-----", "")
                 .replaceAll("-----END PRIVATE KEY-----", "")
                 .replaceAll("\\s+", "");
 
-        byte[] keyBytes = Base64.getDecoder().decode(key);
-        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+        byte[] decoded = Base64.getDecoder().decode(key);
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(decoded);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         return keyFactory.generatePrivate(keySpec);
     }
 
-    private PublicKey loadPublicKey(String filePath) throws Exception {
-        String key = new String(Files.readAllBytes(Paths.get(filePath)))
+    private PublicKey loadPublicKey(String resourcePath) throws Exception {
+        Resource resource = resourceLoader.getResource(resourcePath);
+        byte[] keyBytes = readAllBytes(resource);
+
+        String key = new String(keyBytes)
                 .replaceAll("-----BEGIN PUBLIC KEY-----", "")
                 .replaceAll("-----END PUBLIC KEY-----", "")
                 .replaceAll("\\s+", "");
 
-        byte[] keyBytes = Base64.getDecoder().decode(key);
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
+        byte[] decoded = Base64.getDecoder().decode(key);
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decoded);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         return keyFactory.generatePublic(keySpec);
+    }
+
+    private byte[] readAllBytes(Resource resource) throws IOException {
+        try (InputStream is = resource.getInputStream()) {
+            return is.readAllBytes();
+        }
     }
 
     public String createAccessToken(Authentication authentication) {
@@ -86,17 +104,28 @@ public class TokenProvider {
                 .claim("role", role)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + (jwtValidityInSeconds * 1000)))
-                .signWith(privateKey, Jwts.SIG.RS256)  // 🔹 Usar el nuevo método recomendado
+                .signWith(privateKey, SignatureAlgorithm.RS256)
+                .compact();
+    }
+
+    public String createAccessToken(String email, String role) {
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("role", role)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + (jwtValidityInSeconds * 1000)))
+                .signWith(privateKey, SignatureAlgorithm.RS256)
                 .compact();
     }
 
     public Authentication getAuthentication(String token) {
         try {
-            Claims claims = Jwts.parser()
+            Jws<Claims> claimsJws = Jwts.parser()
                     .setSigningKey(publicKey)
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseClaimsJws(token);
+
+            Claims claims = claimsJws.getBody();
 
             String role = claims.get("role", String.class);
             List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
@@ -108,19 +137,5 @@ public class TokenProvider {
         } catch (JwtException e) {
             throw new RuntimeException("Token JWT inválido", e);
         }
-
     }
-    public String createAccessToken(String email, String role) {
-        return Jwts.builder()
-                .setSubject(email)
-                .claim("role", role)  // ✅ Agregar el rol en el token
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + (jwtValidityInSeconds * 1000)))
-                .signWith(privateKey, Jwts.SIG.RS256)
-                .compact();
-    }
-
-
-
-
 }
