@@ -1,9 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9.6-eclipse-temurin-17'  // Imagen oficial con Java y Maven
-        }
-    }
+    agent any
 
     environment {
         MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
@@ -19,32 +15,47 @@ pipeline {
         stage('Compilar Proyecto') {
             steps {
                 echo 'Compilando proyecto...'
-                sh 'mvn clean compile'
+                script {
+                    docker.image('maven:3.9.6-eclipse-temurin-17').inside {
+                        sh 'mvn clean compile'
+                    }
+                }
             }
         }
 
         stage('Ejecutar Pruebas') {
             steps {
                 echo 'Ejecutando pruebas...'
-                sh 'mvn test'
+                script {
+                    docker.image('maven:3.9.6-eclipse-temurin-17').inside {
+                        sh 'mvn test'
+                    }
+                }
             }
         }
 
         stage('Reporte de Cobertura') {
             steps {
                 echo 'Generando reporte de cobertura...'
-                sh 'mvn jacoco:report'
+                script {
+                    docker.image('maven:3.9.6-eclipse-temurin-17').inside {
+                        sh 'mvn jacoco:report'
+                    }
+                }
             }
         }
 
         stage('Publicar Reportes') {
             steps {
-                junit 'target/surefire-reports/*.xml'
-                publishHTML(target: [
-                    reportDir: 'target/site/jacoco',
-                    reportFiles: 'index.html',
-                    reportName: 'JaCoCo Coverage Report'
-                ])
+                script {
+                    // Estos pasos ya no necesitan docker
+                    junit 'target/surefire-reports/*.xml'
+                    publishHTML(target: [
+                        reportDir: 'target/site/jacoco',
+                        reportFiles: 'index.html',
+                        reportName: 'JaCoCo Coverage Report'
+                    ])
+                }
             }
         }
     }
