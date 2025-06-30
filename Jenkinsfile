@@ -1,5 +1,5 @@
 pipeline {
-       agent { label 'backend' }
+    agent { label 'backend' }
 
     environment {
         AWS_REGION = 'us-east-1'
@@ -21,17 +21,16 @@ pipeline {
 
         stage('Build JAR') {
             steps {
-                bat 'mvn clean package -DskipTests'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Login to AWS ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-
-                    bat '''
-                    powershell -Command "$password = aws ecr get-login-password --region %AWS_REGION%; \
-                        docker login --username AWS --password $password %ECR_REGISTRY%"
+                    sh '''
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin $ECR_REGISTRY
                     '''
                 }
             }
@@ -45,7 +44,7 @@ pipeline {
             }
         }
 
-        stage('Push Image to ECR') {
+        stage('Push Docker Image to ECR') {
             steps {
                 script {
                     dockerImage.push()
@@ -54,43 +53,37 @@ pipeline {
             }
         }
 
-        stage('Check AWS Identity') {
+        stage('Deploy to EKS') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-                    bat 'aws sts get-caller-identity --region %AWS_REGION%'
+                    script {
+                        def kubeconfigPath = "${env.WORKSPACE}/.kube/config"
+
+                        sh """
+                            mkdir -p ${env.WORKSPACE}/.kube
+                            aws eks update-kubeconfig \
+                                --region $AWS_REGION \
+                                --name eccomerceveterinariasanfrancisco \
+                                --kubeconfig ${kubeconfigPath}
+                        """
+
+                        withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
+                            sh 'kubectl get nodes'
+                            sh """
+                                kubectl set image deployment/backend-deployment backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default
+                            """
+                        }
+                    }
                 }
             }
         }
 
-stage('Deploy to EKS') {
-    steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
-            script {
-                def kubeConfigPath = "${env.WORKSPACE}\\.kube\\config"
-
-                bat """
-                    aws eks update-kubeconfig --region ${AWS_REGION} --name eccomerceveterinariasanfrancisco --kubeconfig ${kubeConfigPath}
-                    mkdir C:\\Users\\jenkins\\.kube 2>NUL
-                    copy ${kubeConfigPath} C:\\Users\\jenkins\\.kube\\config
-                """
-
-                withEnv(["KUBECONFIG=C:\\Users\\jenkins\\.kube\\config"]) {
-                    bat 'kubectl get nodes'
-                    bat "kubectl set image deployment/backend-deployment backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} -n default"
-                }
+        stage('Verificar Deployments') {
+            steps {
+                sh 'kubectl get deployments -n default'
             }
         }
     }
-}
-
-stage('Verificar Deployments') {
-  steps {
-    bat 'kubectl get deployments -n default'
-  }
-}
-}
-
-
 
     post {
         failure {
@@ -101,4 +94,3 @@ stage('Verificar Deployments') {
         }
     }
 }
-
