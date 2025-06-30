@@ -1,64 +1,70 @@
 pipeline {
-    agent {
-        dockerfile {
-            filename 'Dockerfile'
-            dir '.'
-        }
-    }
-
-    environment {
-        MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
-    }
+    agent none
 
     stages {
-        stage('Checkout Código') {
-            steps {
-                checkout scm
+        stage('Backend Test') {
+            agent {
+                dockerfile {
+                    filename 'Dockerfile'
+                    dir '.'
+                }
             }
-        }
 
-        stage('Compilar Proyecto') {
-            steps {
-                echo 'Compilando proyecto...'
-                sh 'mvn clean compile'
+            environment {
+                MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
             }
-        }
 
-        stage('Ejecutar Pruebas') {
-            steps {
-                echo 'Ejecutando pruebas...'
-                sh 'mvn test'
+            stages {
+                stage('Checkout Código') {
+                    steps {
+                        checkout scm
+                    }
+                }
+
+                stage('Compilar Proyecto') {
+                    steps {
+                        echo 'Compilando proyecto...'
+                        sh 'mvn clean compile'
+                    }
+                }
+
+                stage('Ejecutar Pruebas') {
+                    steps {
+                        echo 'Ejecutando pruebas...'
+                        sh 'mvn test'
+                    }
+                }
+
+                stage('Reporte de Cobertura (opcional)') {
+                    steps {
+                        echo 'Generando reporte de cobertura...'
+                        sh 'mvn jacoco:report'
+                    }
+                }
+
+                stage('Publicar Reportes') {
+                    steps {
+                        junit 'target/surefire-reports/*.xml'
+                        publishHTML(target: [
+                            reportDir: 'target/site/jacoco',
+                            reportFiles: 'index.html',
+                            reportName: 'JaCoCo Coverage Report'
+                        ])
+                    }
+                }
             }
-        }
 
-        stage('Reporte de Cobertura (opcional)') {
-            steps {
-                echo 'Generando reporte de cobertura...'
-                sh 'mvn jacoco:report'
+            post {
+                success {
+                    echo 'Pruebas ejecutadas exitosamente.'
+                }
+                failure {
+                    echo 'Las pruebas fallaron.'
+                }
+                always {
+                    archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true
+                }
             }
-        }
-
-        stage('Publicar Reportes') {
-            steps {
-                junit 'target/surefire-reports/*.xml'
-                publishHTML(target: [
-                    reportDir: 'target/site/jacoco',
-                    reportFiles: 'index.html',
-                    reportName: 'JaCoCo Coverage Report'
-                ])
-            }
-        }
-    }
-
-    post {
-        success {
-            echo ' Pruebas ejecutadas exitosamente.'
-        }
-        failure {
-            echo 'Las pruebas fallaron.'
-        }
-        always {
-            archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true
         }
     }
 }
