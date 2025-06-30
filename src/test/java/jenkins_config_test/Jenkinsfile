@@ -1,12 +1,13 @@
 pipeline {
-    agent { label 'backend-test-agent' }
+    agent {
+        dockerfile {
+            filename 'Dockerfile'
+            dir '.'
+        }
+    }
 
     environment {
         MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
-    }
-
-    tools {
-        maven 'Maven 3'
     }
 
     stages {
