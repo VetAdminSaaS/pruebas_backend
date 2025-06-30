@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        label 'backend-test-agent'
+    }
 
     environment {
         MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
@@ -15,47 +17,32 @@ pipeline {
         stage('Compilar Proyecto') {
             steps {
                 echo 'Compilando proyecto...'
-                script {
-                    docker.image('maven:3.9.6-eclipse-temurin-17').inside {
-                        sh 'mvn clean compile'
-                    }
-                }
+                sh 'mvn clean compile'
             }
         }
 
         stage('Ejecutar Pruebas') {
             steps {
                 echo 'Ejecutando pruebas...'
-                script {
-                    docker.image('maven:3.9.6-eclipse-temurin-17').inside {
-                        sh 'mvn test'
-                    }
-                }
+                sh 'mvn test'
             }
         }
 
         stage('Reporte de Cobertura') {
             steps {
                 echo 'Generando reporte de cobertura...'
-                script {
-                    docker.image('maven:3.9.6-eclipse-temurin-17').inside {
-                        sh 'mvn jacoco:report'
-                    }
-                }
+                sh 'mvn jacoco:report'
             }
         }
 
         stage('Publicar Reportes') {
             steps {
-                script {
-                    // Estos pasos ya no necesitan docker
-                    junit 'target/surefire-reports/*.xml'
-                    publishHTML(target: [
-                        reportDir: 'target/site/jacoco',
-                        reportFiles: 'index.html',
-                        reportName: 'JaCoCo Coverage Report'
-                    ])
-                }
+                junit 'target/surefire-reports/*.xml'
+                publishHTML(target: [
+                    reportDir: 'target/site/jacoco',
+                    reportFiles: 'index.html',
+                    reportName: 'JaCoCo Coverage Report'
+                ])
             }
         }
     }
