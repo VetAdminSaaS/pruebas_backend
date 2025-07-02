@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'jenkins-agent-with-tools'
+            image 'fab265/backend-agent:v1'
             args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
