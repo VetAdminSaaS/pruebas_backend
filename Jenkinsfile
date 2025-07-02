@@ -1,11 +1,16 @@
 pipeline {
-    agent { label 'backend' }
+    agent {
+        docker {
+            image 'jenkins-agent-with-tools'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
-        AWS_REGION = 'us-east-1'
+        AWS_REGION   = 'us-east-1'
         ECR_REGISTRY = '478039852035.dkr.ecr.us-east-1.amazonaws.com'
-        ECR_REPO = 'eccomerceveterinariasanfrancisco-backend'
-        IMAGE_TAG = "${env.GIT_COMMIT.take(7)}"
+        ECR_REPO     = 'eccomerceveterinariasanfrancisco-backend'
+        IMAGE_TAG    = "${GIT_COMMIT.take(7)}"
     }
 
     stages {
@@ -28,6 +33,7 @@ pipeline {
                     credentialsId: 'SanFranciscoAWS'
                 ]]) {
                     sh '''
+                        echo "Autenticando en ECR..."
                         aws ecr get-login-password --region $AWS_REGION | \
                         docker login --username AWS --password-stdin $ECR_REGISTRY
                     '''
@@ -35,19 +41,12 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
-                }
-            }
-        }
-
-        stage('Push Docker Image to ECR') {
-            steps {
-                script {
-                    dockerImage.push()
-                    dockerImage.push('latest')
+                    def image = docker.build("${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}")
+                    image.push()
+                    image.push('latest')
                 }
             }
         }
@@ -73,7 +72,7 @@ pipeline {
                             sh 'kubectl get nodes'
                             sh """
                                 kubectl set image deployment/backend-deployment \
-                                    backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG \
+                                    backend-container=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} \
                                     -n default
                             """
                         }
@@ -84,14 +83,16 @@ pipeline {
 
         stage('Verificar Deployments') {
             steps {
-                sh 'kubectl get deployments -n default'
+                withEnv(["KUBECONFIG=${env.WORKSPACE}/.kube/config"]) {
+                    sh 'kubectl get deployments -n default'
+                }
             }
         }
     }
 
     post {
         failure {
-            echo 'El pipeline falló en algún lugar del proyecto.'
+            echo 'El pipeline falló en alguna etapa.'
         }
         success {
             echo 'El pipeline se ejecutó correctamente.'
