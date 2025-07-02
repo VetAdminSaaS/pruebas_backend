@@ -8,10 +8,6 @@ pipeline {
         IMAGE_TAG = "${env.GIT_COMMIT.take(7)}"
     }
 
-    tools {
-        maven 'Maven 3'
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -27,7 +23,10 @@ pipeline {
 
         stage('Login to AWS ECR') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'SanFranciscoAWS'
+                ]]) {
                     sh '''
                         aws ecr get-login-password --region $AWS_REGION | \
                         docker login --username AWS --password-stdin $ECR_REGISTRY
@@ -55,7 +54,10 @@ pipeline {
 
         stage('Deploy to EKS') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'SanFranciscoAWS']]) {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'SanFranciscoAWS'
+                ]]) {
                     script {
                         def kubeconfigPath = "${env.WORKSPACE}/.kube/config"
 
@@ -70,7 +72,9 @@ pipeline {
                         withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
                             sh 'kubectl get nodes'
                             sh """
-                                kubectl set image deployment/backend-deployment backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default
+                                kubectl set image deployment/backend-deployment \
+                                    backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG \
+                                    -n default
                             """
                         }
                     }
