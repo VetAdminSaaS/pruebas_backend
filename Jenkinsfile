@@ -1,15 +1,16 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'fab265/backend-agent:v1'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
         AWS_REGION   = 'us-east-1'
         ECR_REGISTRY = '478039852035.dkr.ecr.us-east-1.amazonaws.com'
         ECR_REPO     = 'eccomerceveterinariasanfrancisco-backend'
         IMAGE_TAG    = "${GIT_COMMIT.take(7)}"
-    }
-
-    tools {
-        maven 'Maven3' // Asegúrate de tenerlo configurado en Jenkins -> Global Tools
     }
 
     stages {
@@ -59,6 +60,7 @@ pipeline {
                 ]]) {
                     script {
                         def kubeconfigPath = "${env.WORKSPACE}/.kube/config"
+
                         sh """
                             mkdir -p ${env.WORKSPACE}/.kube
                             aws eks update-kubeconfig \
@@ -66,6 +68,7 @@ pipeline {
                                 --name eccomerceveterinariasanfrancisco \
                                 --kubeconfig ${kubeconfigPath}
                         """
+
                         withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
                             sh """
                                 kubectl set image deployment/backend-deployment \
@@ -89,10 +92,10 @@ pipeline {
 
     post {
         failure {
-            echo 'El pipeline falló en alguna etapa.'
+            echo '❌ El pipeline falló en alguna etapa.'
         }
         success {
-            echo 'El pipeline se ejecutó correctamente.'
+            echo '✅ El pipeline se ejecutó correctamente.'
         }
     }
 }
