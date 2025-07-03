@@ -1,6 +1,12 @@
 pipeline {
     
-    agent { label 'backend' }
+    agent {
+        docker {
+        image 'fab265/backend-agent:v1'
+        label 'docker-agent' // el nodo que tiene Docker DinD
+        args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
         AWS_REGION   = 'us-east-1'
