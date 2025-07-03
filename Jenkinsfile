@@ -8,6 +8,7 @@ pipeline {
         ECR_REGISTRY = '478039852035.dkr.ecr.us-east-1.amazonaws.com'
         ECR_REPO     = 'eccomerceveterinariasanfrancisco-backend'
         IMAGE_TAG    = "${GIT_COMMIT.take(7)}"
+        PATH         = "/usr/local/bin:$PATH" // 🔧 Asegura que aws y kubectl funcionen
     }
 
     stages {
