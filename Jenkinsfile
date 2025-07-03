@@ -11,13 +11,13 @@ pipeline {
     }
 
     stages {
-        stage(' Verificar herramientas instaladas') {
+        stage('Verificar herramientas instaladas') {
             steps {
-                echo ' Verificando si aws, docker y kubectl están disponibles...'
+                echo 'Verificando si aws, docker y kubectl están disponibles...'
                 sh '''
-                    which aws || echo " aws no está instalado"
-                    which docker || echo " docker no está instalado"
-                    which kubectl || echo " kubectl no está instalado"
+                    which aws || echo "aws no está instalado"
+                    which docker || echo "docker no está instalado"
+                    which kubectl || echo "kubectl no está instalado"
                     aws --version || true
                     docker --version || true
                     kubectl version --client || true
@@ -99,9 +99,7 @@ pipeline {
                             '''
 
                             // Actualizar imagen
-                            sh """
-                                kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default
-                            """
+                            sh "kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default"
                             echo 'Imagen actualizada en el deployment de EKS.'
 
                             // Esperar a que se complete el rollout
@@ -112,15 +110,30 @@ pipeline {
             }
         }
 
-        stage('Verificar deployments en EKS') {
+        stage('Verificar estado de pods backend') {
             steps {
-                echo 'Verificando estado de los deployments en EKS...'
+                echo 'Verificando estado de los pods del backend...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
                 ]]) {
                     withEnv(["KUBECONFIG=${env.WORKSPACE}/.kube/config"]) {
-                        sh 'kubectl get deployments -n default'
+                        script {
+                            sh 'kubectl get pods -n default'
+
+                            def pods = sh(
+                                script: "kubectl get pods -l app=backend -n default -o jsonpath='{.items[*].metadata.name}'",
+                                returnStdout: true
+                            ).trim().split()
+
+                            for (pod in pods) {
+                                echo "Logs del pod ${pod}"
+                                sh "kubectl logs ${pod} -n default || echo 'No se pudieron obtener logs'"
+
+                                echo "Describe del pod ${pod}"
+                                sh "kubectl describe pod ${pod} -n default || echo 'No se pudo describir el pod'"
+                            }
+                        }
                     }
                 }
             }
