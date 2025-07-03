@@ -20,12 +20,18 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     ./aws/install && \
     rm -rf awscliv2.zip aws
 
+# Verifica instalación AWS CLI
+RUN /usr/local/bin/aws --version
+
 # Instalar kubectl (v1.30.1 como ejemplo)
 RUN curl -LO https://dl.k8s.io/release/v1.30.1/bin/linux/amd64/kubectl && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
     rm kubectl
 
-# Verificar que aws está disponible para el usuario jenkins
-RUN echo 'export PATH=$PATH:/usr/local/bin' >> /etc/profile.d/aws.sh && chmod +x /etc/profile.d/aws.sh
+# Verifica instalación kubectl
+RUN kubectl version --client
+
+# Confirmar rutas en PATH para todos los usuarios
+ENV PATH="/usr/local/bin:$PATH"
 
 USER jenkins
