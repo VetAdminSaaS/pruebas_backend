@@ -1,10 +1,6 @@
 pipeline {
-    agent {
-        docker {
-            image 'fab265/backend-agent:v1'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    
+    agent { label 'backend' }
 
     environment {
         AWS_REGION   = 'us-east-1'
