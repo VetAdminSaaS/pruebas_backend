@@ -92,25 +92,37 @@ pipeline {
                                     --name eccomerceveterinariasanfrancisco \
                                     --kubeconfig ${kubeconfigPath}
                             """
-                            echo ' Configuración de acceso a EKS generada correctamente.'
+                            echo 'Configuración de acceso a EKS generada correctamente.'
 
                             withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
+
+                                // Asegura que el Deployment backend exista
+                                sh '''
+                                    if ! kubectl get deployment backend -n default > /dev/null 2>&1; then
+                                        echo " Deployment 'backend' no existe. Aplicando manifiesto inicial..."
+                                        kubectl apply -f k8s/backend-deployment.yaml
+                                    else
+                                        echo "Deployment 'backend' ya existe."
+                                    fi
+                                '''
+
+                  
                                 sh """
-                                    kubectl set image deployment/backend backend=478039852035.dkr.ecr.us-east-1.amazonaws.com/eccomerceveterinariasanfrancisco-backend:${BUILD_TAG} -n default
+                                    kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default
                                 """
-                                echo ' Imagen actualizada en el deployment de EKS.'
+                                echo 'Imagen actualizada en el deployment de EKS.'
                             }
                         } catch (err) {
-                            error " Fallo al desplegar en EKS: ${err}"
+                            error "Fallo al desplegar en EKS: ${err}"
                         }
                     }
                 }
             }
         }
 
-        stage(' Verificar deployments en EKS') {
+        stage('Verificar deployments en EKS') {
             steps {
-                echo ' Verificando estado de los deployments en EKS...'
+                echo 'Verificando estado de los deployments en EKS...'
                 withEnv(["KUBECONFIG=${env.WORKSPACE}/.kube/config"]) {
                     sh 'kubectl get deployments -n default'
                 }
@@ -120,10 +132,10 @@ pipeline {
 
     post {
         failure {
-            echo ' El pipeline falló en alguna etapa. Revisa los mensajes de error arriba.'
+            echo 'El pipeline falló en alguna etapa. Revisa los mensajes de error arriba.'
         }
         success {
-            echo ' El pipeline finalizó correctamente y el backend fue desplegado en EKS.'
+            echo 'El pipeline finalizó correctamente y el backend fue desplegado en EKS.'
         }
     }
 }
