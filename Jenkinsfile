@@ -11,82 +11,110 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('🔍 Verificar herramientas instaladas') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Build JAR') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-
-        stage('Login to AWS ECR') {
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'SanFranciscoAWS'
-                ]]) {
-                    sh '''
-                        export PATH=/usr/local/bin:$PATH
-                        aws ecr get-login-password --region $AWS_REGION | \
-                        docker login --username AWS --password-stdin $ECR_REGISTRY
-                    '''
-                }
-            }
-        }
-
-        stage('Build & Push Docker Image') {
-            steps {
+                echo '🔧 Verificando si aws, docker y kubectl están disponibles...'
                 sh '''
-                    docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
-                    docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
-                    docker tag $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:latest
-                    docker push $ECR_REGISTRY/$ECR_REPO:latest
+                    which aws || echo "❌ aws no está instalado"
+                    which docker || echo "❌ docker no está instalado"
+                    which kubectl || echo "❌ kubectl no está instalado"
+                    aws --version || true
+                    docker --version || true
+                    kubectl version --client || true
                 '''
             }
         }
 
-        stage('Deploy to EKS') {
+        stage('📦 Checkout del código fuente') {
             steps {
+                echo '🔁 Obteniendo el código desde Git...'
+                checkout scm
+            }
+        }
+
+        stage('🛠️ Compilar JAR (mvn clean package)') {
+            steps {
+                echo '⚙️ Compilando el proyecto Java...'
+                sh 'mvn clean package -DskipTests'
+                echo '✅ JAR compilado exitosamente.'
+            }
+        }
+
+        stage('🔐 Login a AWS ECR') {
+            steps {
+                echo '🔐 Autenticando en AWS ECR...'
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'SanFranciscoAWS'
                 ]]) {
                     script {
-                        def kubeconfigPath = "${env.WORKSPACE}/.kube/config"
-
-                        sh """
-                            export PATH=/usr/local/bin:$PATH
-                            mkdir -p ${env.WORKSPACE}/.kube
-                            aws eks update-kubeconfig \
-                                --region $AWS_REGION \
-                                --name eccomerceveterinariasanfrancisco \
-                                --kubeconfig ${kubeconfigPath}
-                        """
-
-                        withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
-                            sh """
-                                export PATH=/usr/local/bin:$PATH
-                                kubectl set image deployment/backend-deployment \
-                                    backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG \
-                                    -n default
-                            """
+                        try {
+                            sh '''
+                                aws ecr get-login-password --region $AWS_REGION | \
+                                docker login --username AWS --password-stdin $ECR_REGISTRY
+                            '''
+                            echo '✅ Login exitoso en ECR.'
+                        } catch (err) {
+                            error "❌ Fallo el login en ECR: ${err}"
                         }
                     }
                 }
             }
         }
 
-        stage('Verificar Deployments') {
+        stage('🐳 Construir y subir imagen Docker') {
             steps {
+                echo '📦 Construyendo imagen Docker...'
+                sh """
+                    docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
+                    docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                    docker tag $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:latest
+                    docker push $ECR_REGISTRY/$ECR_REPO:latest
+                """
+                echo "✅ Imagen Docker publicada con tag: $IMAGE_TAG"
+            }
+        }
+
+        stage('🚀 Desplegar en Amazon EKS') {
+            steps {
+                echo '🚀 Iniciando despliegue a EKS...'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'SanFranciscoAWS'
+                ]]) {
+                    script {
+                        def kubeconfigPath = "${env.WORKSPACE}/.kube/config"
+                        try {
+                            sh """
+                                mkdir -p ${env.WORKSPACE}/.kube
+                                aws eks update-kubeconfig \
+                                    --region $AWS_REGION \
+                                    --name eccomerceveterinariasanfrancisco \
+                                    --kubeconfig ${kubeconfigPath}
+                            """
+                            echo '✅ Configuración de acceso a EKS generada correctamente.'
+
+                            withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
+                                sh """
+                                    kubectl set image deployment/backend-deployment \
+                                        backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG \
+                                        -n default
+                                """
+                                echo '✅ Imagen actualizada en el deployment de EKS.'
+                            }
+                        } catch (err) {
+                            error "❌ Fallo al desplegar en EKS: ${err}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('📋 Verificar deployments en EKS') {
+            steps {
+                echo '🔍 Verificando estado de los deployments en EKS...'
                 withEnv(["KUBECONFIG=${env.WORKSPACE}/.kube/config"]) {
-                    sh '''
-                        export PATH=/usr/local/bin:$PATH
-                        kubectl get deployments -n default
-                    '''
+                    sh 'kubectl get deployments -n default'
                 }
             }
         }
@@ -94,10 +122,10 @@ pipeline {
 
     post {
         failure {
-            echo '❌ El pipeline falló en alguna etapa.'
+            echo '❌ El pipeline falló en alguna etapa. Revisa los mensajes de error arriba. ⬆️'
         }
         success {
-            echo '✅ El pipeline se ejecutó correctamente.'
+            echo '✅ El pipeline finalizó correctamente y el backend fue desplegado en EKS.'
         }
     }
 }
