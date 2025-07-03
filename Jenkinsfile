@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Verificar herramientas instaladas') {
             steps {
-                echo 'Verificando herramientas necesarias...'
+                echo ' Verificando herramientas necesarias...'
                 sh '''
                     which aws || echo "aws no está instalado"
                     which docker || echo "docker no está instalado"
@@ -25,21 +25,21 @@ pipeline {
 
         stage('Checkout del código fuente') {
             steps {
-                echo 'Clonando repositorio...'
+                echo ' Clonando repositorio...'
                 checkout scm
             }
         }
 
-        stage('Compilar JAR (mvn clean package)') {
+        stage('Compilar JAR') {
             steps {
-                echo 'Compilando el backend Java...'
+                echo ' Compilando backend Java...'
                 sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Login a AWS ECR') {
             steps {
-                echo 'Autenticando con AWS ECR...'
+                echo ' Autenticando en AWS ECR...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
@@ -54,7 +54,7 @@ pipeline {
 
         stage('Construir y subir imagen Docker') {
             steps {
-                echo 'Construyendo y subiendo imagen Docker...'
+                echo ' Construyendo y subiendo imagen Docker...'
                 sh """
                     docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
                     docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
@@ -66,7 +66,7 @@ pipeline {
 
         stage('Desplegar en Amazon EKS') {
             steps {
-                echo 'Desplegando backend en EKS...'
+                echo ' Desplegando backend en EKS...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
@@ -82,31 +82,32 @@ pipeline {
                         """
 
                         withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
-                            // Asegurar que el deployment exista
+
+                            // Verificar y aplicar deployment si no existe
                             sh '''
                                 if ! kubectl get deployment backend -n default > /dev/null 2>&1; then
-                                    echo "Deployment 'backend' no existe. Creando..."
+                                    echo " Deployment 'backend' no existe. Creando..."
                                     kubectl apply -f k8s/backend-deployment.yaml
                                 else
-                                    echo "Deployment 'backend' ya existe."
+                                    echo " Deployment 'backend' ya existe."
                                 fi
                             '''
 
-                            // Eliminar pods en estado Terminating ANTES del rollout
+                            //  Forzar eliminación de pods Terminating antes del rollout
                             sh '''
-                                echo "Verificando pods en estado Terminating..."
-                                for pod in $(kubectl get pods -n default --field-selector=status.phase=Running -o jsonpath="{.items[*].metadata.name}"); do
-                                    if kubectl get pod $pod -n default -o json | grep -q '"deletionTimestamp"'; then
-                                        echo "Eliminando pod atascado: $pod"
-                                        kubectl delete pod $pod -n default --grace-period=0 --force || true
+                                echo " Eliminando pods en estado Terminating (si existen)..."
+                                for pod in $(kubectl get pods -n default -o jsonpath="{.items[*].metadata.name}"); do
+                                    if kubectl get pod $pod -n default -o json | grep -q "deletionTimestamp"; then
+                                        echo " Pod $pod está en estado Terminating. Eliminando..."
+                                        kubectl delete pod $pod --grace-period=0 --force -n default || true
                                     fi
                                 done
                             '''
 
-                            // Actualizar imagen
+                            
                             sh "kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default"
 
-                            // Esperar a que el rollout finalice correctamente
+                            
                             sh 'kubectl rollout status deployment/backend -n default'
                         }
                     }
@@ -116,7 +117,7 @@ pipeline {
 
         stage('Verificar estado de pods backend') {
             steps {
-                echo 'Verificando estado y logs de los pods del backend...'
+                echo ' Verificando estado y logs de los pods del backend...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
@@ -130,9 +131,9 @@ pipeline {
                             ).trim().split()
 
                             for (pod in pods) {
-                                echo " Logs del pod: ${pod}"
+                                echo " Logs de ${pod}"
                                 sh "kubectl logs ${pod} -n default || true"
-                                echo " Describe del pod: ${pod}"
+                                echo " Describe de ${pod}"
                                 sh "kubectl describe pod ${pod} -n default || true"
                             }
                         }
@@ -144,7 +145,7 @@ pipeline {
 
     post {
         failure {
-            echo ' El pipeline falló. Revisa los logs para más detalles.'
+            echo ' El pipeline falló. Revisa los logs anteriores.'
         }
         success {
             echo ' Despliegue exitoso. Backend actualizado en EKS.'
