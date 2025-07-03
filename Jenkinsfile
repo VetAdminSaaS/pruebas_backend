@@ -93,14 +93,16 @@ pipeline {
                                 fi
                             '''
 
-                            //  Eliminación robusta de pods en estado Terminating
+                            //  Eliminación robusta con xargs
                             sh '''
-                                echo " Forzando eliminación de pods no Running (incluyendo Terminating)..."
-                                kubectl get pods -n default --field-selector=status.phase!=Running \
-                                  -o jsonpath="{range .items[*]}{.metadata.name}{'\\n'}{end}" | while read pod; do
-                                    echo " Eliminando pod atascado: $pod"
-                                    kubectl delete pod "$pod" --grace-period=0 --force -n default || true
-                                done
+                                echo " Eliminando pods en estado Terminating o no Running (si existen)..."
+                                pods=$(kubectl get pods -n default --field-selector=status.phase!=Running -o jsonpath="{.items[*].metadata.name}")
+                                if [ -n "$pods" ]; then
+                                    echo " Eliminando pods atascados: $pods"
+                                    echo "$pods" | xargs -n1 -I {} kubectl delete pod {} --grace-period=0 --force -n default || true
+                                else
+                                    echo " No hay pods que eliminar."
+                                fi
                             '''
 
                             //  Actualizar imagen en el deployment
@@ -116,7 +118,7 @@ pipeline {
 
         stage('Verificar estado de pods backend') {
             steps {
-                echo 'Verificando estado y logs de los pods del backend...'
+                echo ' Verificando estado y logs de los pods del backend...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
@@ -130,9 +132,9 @@ pipeline {
                             ).trim().split()
 
                             for (pod in pods) {
-                                echo "Logs de ${pod}"
+                                echo " Logs de ${pod}"
                                 sh "kubectl logs ${pod} -n default || true"
-                                echo "Describe de ${pod}"
+                                echo " Describe de ${pod}"
                                 sh "kubectl describe pod ${pod} -n default || true"
                             }
                         }
@@ -144,10 +146,10 @@ pipeline {
 
     post {
         failure {
-            echo 'El pipeline falló. Revisa los logs anteriores.'
+            echo ' El pipeline falló. Revisa los logs anteriores.'
         }
         success {
-            echo 'Despliegue exitoso. Backend actualizado en EKS.'
+            echo ' Despliegue exitoso. Backend actualizado en EKS.'
         }
     }
 }
