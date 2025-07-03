@@ -93,21 +93,18 @@ pipeline {
                                 fi
                             '''
 
-                            //  Forzar eliminación de pods Terminating antes del rollout
+                            //  Eliminación robusta de pods en estado Terminating
                             sh '''
-                                echo " Eliminando pods en estado Terminating (si existen)..."
-                                for pod in $(kubectl get pods -n default -o jsonpath="{.items[*].metadata.name}"); do
-                                    if kubectl get pod $pod -n default -o json | grep -q "deletionTimestamp"; then
-                                        echo " Pod $pod está en estado Terminating. Eliminando..."
-                                        kubectl delete pod $pod --grace-period=0 --force -n default || true
+                                echo " Verificando y eliminando pods en estado Terminating (si existen)..."
+                                for pod in $(kubectl get pods -n default -o name); do
+                                    if kubectl get $pod -n default -o jsonpath="{.metadata.deletionTimestamp}" | grep -q .; then
+                                        echo " Eliminando pod atascado: $pod"
+                                        kubectl delete $pod --grace-period=0 --force -n default || true
                                     fi
                                 done
                             '''
-
-                            
                             sh "kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default"
 
-                            
                             sh 'kubectl rollout status deployment/backend -n default'
                         }
                     }
