@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        label 'backend'
-    }
+    agent { label 'backend' }
 
     environment {
         AWS_REGION   = 'us-east-1'
@@ -13,7 +11,7 @@ pipeline {
     stages {
         stage('Verificar herramientas instaladas') {
             steps {
-                echo 'Verificando si aws, docker y kubectl están disponibles...'
+                echo 'Verificando herramientas necesarias...'
                 sh '''
                     which aws || echo "aws no está instalado"
                     which docker || echo "docker no está instalado"
@@ -27,22 +25,21 @@ pipeline {
 
         stage('Checkout del código fuente') {
             steps {
-                echo 'Obteniendo el código desde Git...'
+                echo 'Clonando repositorio...'
                 checkout scm
             }
         }
 
         stage('Compilar JAR (mvn clean package)') {
             steps {
-                echo 'Compilando el proyecto Java...'
+                echo 'Compilando el backend Java...'
                 sh 'mvn clean package -DskipTests'
-                echo 'JAR compilado exitosamente.'
             }
         }
 
         stage('Login a AWS ECR') {
             steps {
-                echo 'Autenticando en AWS ECR...'
+                echo 'Autenticando con AWS ECR...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
@@ -51,27 +48,25 @@ pipeline {
                         aws ecr get-login-password --region $AWS_REGION | \
                         docker login --username AWS --password-stdin $ECR_REGISTRY
                     '''
-                    echo 'Login exitoso en ECR.'
                 }
             }
         }
 
         stage('Construir y subir imagen Docker') {
             steps {
-                echo 'Construyendo imagen Docker...'
+                echo 'Construyendo y subiendo imagen Docker...'
                 sh """
                     docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
                     docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
                     docker tag $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:latest
                     docker push $ECR_REGISTRY/$ECR_REPO:latest
                 """
-                echo "Imagen Docker publicada con tag: $IMAGE_TAG"
             }
         }
 
         stage('Desplegar en Amazon EKS') {
             steps {
-                echo 'Iniciando despliegue a EKS...'
+                echo 'Desplegando backend en EKS...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
@@ -85,35 +80,34 @@ pipeline {
                                 --name eccomerceveterinariasanfrancisco \
                                 --kubeconfig ${kubeconfigPath}
                         """
-                        echo 'Configuración de acceso a EKS generada correctamente.'
 
                         withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
+                            // Asegurar que el deployment exista
                             sh '''
                                 if ! kubectl get deployment backend -n default > /dev/null 2>&1; then
-                                    echo "Deployment 'backend' no existe. Aplicando manifiesto inicial..."
+                                    echo "Deployment 'backend' no existe. Creando..."
                                     kubectl apply -f k8s/backend-deployment.yaml
                                 else
                                     echo "Deployment 'backend' ya existe."
                                 fi
                             '''
 
-                            sh "kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default"
-                            echo 'Imagen actualizada en el deployment de EKS.'
-
-                            sh 'kubectl rollout status deployment/backend -n default'
-
-                            // Eliminar pods en estado Terminating si existen
+                            // Eliminar pods en estado Terminating ANTES del rollout
                             sh '''
-                                TERMINATING=$(kubectl get pods -n default | grep Terminating | awk '{print $1}')
-                                if [ ! -z "$TERMINATING" ]; then
-                                    echo "Forzando eliminación de pods en estado Terminating..."
-                                    for pod in $TERMINATING; do
-                                        kubectl delete pod $pod --grace-period=0 --force -n default
-                                    done
-                                else
-                                    echo "No hay pods en estado Terminating."
-                                fi
+                                echo "Verificando pods en estado Terminating..."
+                                for pod in $(kubectl get pods -n default --field-selector=status.phase=Running -o jsonpath="{.items[*].metadata.name}"); do
+                                    if kubectl get pod $pod -n default -o json | grep -q '"deletionTimestamp"'; then
+                                        echo "Eliminando pod atascado: $pod"
+                                        kubectl delete pod $pod -n default --grace-period=0 --force || true
+                                    fi
+                                done
                             '''
+
+                            // Actualizar imagen
+                            sh "kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default"
+
+                            // Esperar a que el rollout finalice correctamente
+                            sh 'kubectl rollout status deployment/backend -n default'
                         }
                     }
                 }
@@ -122,7 +116,7 @@ pipeline {
 
         stage('Verificar estado de pods backend') {
             steps {
-                echo 'Verificando estado de los pods del backend...'
+                echo 'Verificando estado y logs de los pods del backend...'
                 withCredentials([[ 
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'SanFranciscoAWS' 
@@ -130,18 +124,16 @@ pipeline {
                     withEnv(["KUBECONFIG=${env.WORKSPACE}/.kube/config"]) {
                         script {
                             sh 'kubectl get pods -n default'
-
                             def pods = sh(
                                 script: "kubectl get pods -l app=backend -n default -o jsonpath='{.items[*].metadata.name}'",
                                 returnStdout: true
                             ).trim().split()
 
                             for (pod in pods) {
-                                echo "Logs del pod ${pod}"
-                                sh "kubectl logs ${pod} -n default || echo 'No se pudieron obtener logs'"
-
-                                echo "Describe del pod ${pod}"
-                                sh "kubectl describe pod ${pod} -n default || echo 'No se pudo describir el pod'"
+                                echo " Logs del pod: ${pod}"
+                                sh "kubectl logs ${pod} -n default || true"
+                                echo " Describe del pod: ${pod}"
+                                sh "kubectl describe pod ${pod} -n default || true"
                             }
                         }
                     }
@@ -152,10 +144,10 @@ pipeline {
 
     post {
         failure {
-            echo 'El pipeline falló en alguna etapa. Revisa los mensajes de error arriba.'
+            echo ' El pipeline falló. Revisa los logs para más detalles.'
         }
         success {
-            echo 'El pipeline finalizó correctamente y el backend fue desplegado en EKS.'
+            echo ' Despliegue exitoso. Backend actualizado en EKS.'
         }
     }
 }
