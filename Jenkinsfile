@@ -11,13 +11,13 @@ pipeline {
     }
 
     stages {
-        stage('🔍 Verificar herramientas instaladas') {
+        stage(' Verificar herramientas instaladas') {
             steps {
-                echo '🔧 Verificando si aws, docker y kubectl están disponibles...'
+                echo ' Verificando si aws, docker y kubectl están disponibles...'
                 sh '''
-                    which aws || echo "❌ aws no está instalado"
-                    which docker || echo "❌ docker no está instalado"
-                    which kubectl || echo "❌ kubectl no está instalado"
+                    which aws || echo " aws no está instalado"
+                    which docker || echo " docker no está instalado"
+                    which kubectl || echo " kubectl no está instalado"
                     aws --version || true
                     docker --version || true
                     kubectl version --client || true
@@ -25,24 +25,24 @@ pipeline {
             }
         }
 
-        stage('📦 Checkout del código fuente') {
+        stage(' Checkout del código fuente') {
             steps {
-                echo '🔁 Obteniendo el código desde Git...'
+                echo ' Obteniendo el código desde Git...'
                 checkout scm
             }
         }
 
-        stage('🛠️ Compilar JAR (mvn clean package)') {
+        stage(' Compilar JAR (mvn clean package)') {
             steps {
-                echo '⚙️ Compilando el proyecto Java...'
+                echo ' Compilando el proyecto Java...'
                 sh 'mvn clean package -DskipTests'
-                echo '✅ JAR compilado exitosamente.'
+                echo ' JAR compilado exitosamente.'
             }
         }
 
-        stage('🔐 Login a AWS ECR') {
+        stage(' Login a AWS ECR') {
             steps {
-                echo '🔐 Autenticando en AWS ECR...'
+                echo ' Autenticando en AWS ECR...'
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'SanFranciscoAWS'
@@ -53,31 +53,31 @@ pipeline {
                                 aws ecr get-login-password --region $AWS_REGION | \
                                 docker login --username AWS --password-stdin $ECR_REGISTRY
                             '''
-                            echo '✅ Login exitoso en ECR.'
+                            echo ' Login exitoso en ECR.'
                         } catch (err) {
-                            error "❌ Fallo el login en ECR: ${err}"
+                            error " Fallo el login en ECR: ${err}"
                         }
                     }
                 }
             }
         }
 
-        stage('🐳 Construir y subir imagen Docker') {
+        stage(' Construir y subir imagen Docker') {
             steps {
-                echo '📦 Construyendo imagen Docker...'
+                echo ' Construyendo imagen Docker...'
                 sh """
                     docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
                     docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
                     docker tag $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:latest
                     docker push $ECR_REGISTRY/$ECR_REPO:latest
                 """
-                echo "✅ Imagen Docker publicada con tag: $IMAGE_TAG"
+                echo " Imagen Docker publicada con tag: $IMAGE_TAG"
             }
         }
 
-        stage('🚀 Desplegar en Amazon EKS') {
+        stage(' Desplegar en Amazon EKS') {
             steps {
-                echo '🚀 Iniciando despliegue a EKS...'
+                echo ' Iniciando despliegue a EKS...'
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'SanFranciscoAWS'
@@ -92,27 +92,25 @@ pipeline {
                                     --name eccomerceveterinariasanfrancisco \
                                     --kubeconfig ${kubeconfigPath}
                             """
-                            echo '✅ Configuración de acceso a EKS generada correctamente.'
+                            echo ' Configuración de acceso a EKS generada correctamente.'
 
                             withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
                                 sh """
-                                    kubectl set image deployment/backend-deployment \
-                                        backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG \
-                                        -n default
+                                    kubectl set image deployment/backend backend=478039852035.dkr.ecr.us-east-1.amazonaws.com/eccomerceveterinariasanfrancisco-backend:${BUILD_TAG} -n default
                                 """
-                                echo '✅ Imagen actualizada en el deployment de EKS.'
+                                echo ' Imagen actualizada en el deployment de EKS.'
                             }
                         } catch (err) {
-                            error "❌ Fallo al desplegar en EKS: ${err}"
+                            error " Fallo al desplegar en EKS: ${err}"
                         }
                     }
                 }
             }
         }
 
-        stage('📋 Verificar deployments en EKS') {
+        stage(' Verificar deployments en EKS') {
             steps {
-                echo '🔍 Verificando estado de los deployments en EKS...'
+                echo ' Verificando estado de los deployments en EKS...'
                 withEnv(["KUBECONFIG=${env.WORKSPACE}/.kube/config"]) {
                     sh 'kubectl get deployments -n default'
                 }
@@ -122,10 +120,10 @@ pipeline {
 
     post {
         failure {
-            echo '❌ El pipeline falló en alguna etapa. Revisa los mensajes de error arriba. ⬆️'
+            echo ' El pipeline falló en alguna etapa. Revisa los mensajes de error arriba.'
         }
         success {
-            echo '✅ El pipeline finalizó correctamente y el backend fue desplegado en EKS.'
+            echo ' El pipeline finalizó correctamente y el backend fue desplegado en EKS.'
         }
     }
 }
