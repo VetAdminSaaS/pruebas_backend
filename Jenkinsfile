@@ -1,9 +1,6 @@
 pipeline {
     agent {
-        docker {
-            image 'fab265/backend-agent:v1'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
+        label 'backend-agent'
     }
 
     environment {
@@ -33,7 +30,6 @@ pipeline {
                     credentialsId: 'SanFranciscoAWS'
                 ]]) {
                     sh '''
-                        echo "Autenticando en ECR..."
                         aws ecr get-login-password --region $AWS_REGION | \
                         docker login --username AWS --password-stdin $ECR_REGISTRY
                     '''
