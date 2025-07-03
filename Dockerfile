@@ -7,7 +7,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     docker.io \
     maven \
-    awscli \
     curl \
     unzip \
     apt-transport-https \
@@ -17,6 +16,12 @@ RUN apt-get update && \
     bash && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Instalar AWS CLI v2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws
 
 # Instalar kubectl (versión fija, por ejemplo v1.30.1)
 RUN curl -LO https://dl.k8s.io/release/v1.30.1/bin/linux/amd64/kubectl && \
