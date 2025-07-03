@@ -10,7 +10,8 @@ RUN apt-get update && \
     curl \
     unzip \
     ca-certificates \
-    bash && \
+    bash \
+    git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -18,20 +19,23 @@ RUN apt-get update && \
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
+    ln -s /usr/local/bin/aws /usr/bin/aws && \
     rm -rf awscliv2.zip aws
 
-# Verifica instalación AWS CLI
-RUN /usr/local/bin/aws --version
+# Verificar instalación AWS CLI
+RUN aws --version
 
-# Instalar kubectl (v1.30.1 como ejemplo)
-RUN curl -LO https://dl.k8s.io/release/v1.30.1/bin/linux/amd64/kubectl && \
+# Instalar kubectl (versión fija, puedes cambiar si es necesario)
+ENV KUBECTL_VERSION="v1.30.1"
+RUN curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+    ln -s /usr/local/bin/kubectl /usr/bin/kubectl && \
     rm kubectl
 
-# Verifica instalación kubectl
+# Verificar instalación kubectl
 RUN kubectl version --client
 
-# Confirmar rutas en PATH para todos los usuarios
+# Asegurar que /usr/local/bin esté en PATH
 ENV PATH="/usr/local/bin:$PATH"
 
 USER jenkins
