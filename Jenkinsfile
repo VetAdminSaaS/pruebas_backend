@@ -8,7 +8,6 @@ pipeline {
         ECR_REGISTRY = '478039852035.dkr.ecr.us-east-1.amazonaws.com'
         ECR_REPO     = 'eccomerceveterinariasanfrancisco-backend'
         IMAGE_TAG    = "${GIT_COMMIT.take(7)}"
-        PATH         = "/usr/local/bin:$PATH" // 🔧 Asegura que aws y kubectl funcionen
     }
 
     stages {
@@ -31,6 +30,7 @@ pipeline {
                     credentialsId: 'SanFranciscoAWS'
                 ]]) {
                     sh '''
+                        export PATH=/usr/local/bin:$PATH
                         aws ecr get-login-password --region $AWS_REGION | \
                         docker login --username AWS --password-stdin $ECR_REGISTRY
                     '''
@@ -40,12 +40,12 @@ pipeline {
 
         stage('Build & Push Docker Image') {
             steps {
-                sh """
+                sh '''
                     docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
                     docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
                     docker tag $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:latest
                     docker push $ECR_REGISTRY/$ECR_REPO:latest
-                """
+                '''
             }
         }
 
@@ -59,6 +59,7 @@ pipeline {
                         def kubeconfigPath = "${env.WORKSPACE}/.kube/config"
 
                         sh """
+                            export PATH=/usr/local/bin:$PATH
                             mkdir -p ${env.WORKSPACE}/.kube
                             aws eks update-kubeconfig \
                                 --region $AWS_REGION \
@@ -68,6 +69,7 @@ pipeline {
 
                         withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
                             sh """
+                                export PATH=/usr/local/bin:$PATH
                                 kubectl set image deployment/backend-deployment \
                                     backend-container=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG \
                                     -n default
@@ -81,7 +83,10 @@ pipeline {
         stage('Verificar Deployments') {
             steps {
                 withEnv(["KUBECONFIG=${env.WORKSPACE}/.kube/config"]) {
-                    sh 'kubectl get deployments -n default'
+                    sh '''
+                        export PATH=/usr/local/bin:$PATH
+                        kubectl get deployments -n default
+                    '''
                 }
             }
         }
