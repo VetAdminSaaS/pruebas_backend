@@ -88,7 +88,6 @@ pipeline {
                         echo 'Configuración de acceso a EKS generada correctamente.'
 
                         withEnv(["KUBECONFIG=${kubeconfigPath}"]) {
-                            // Crear el deployment si no existe
                             sh '''
                                 if ! kubectl get deployment backend -n default > /dev/null 2>&1; then
                                     echo "Deployment 'backend' no existe. Aplicando manifiesto inicial..."
@@ -98,12 +97,23 @@ pipeline {
                                 fi
                             '''
 
-                            // Actualizar imagen
                             sh "kubectl set image deployment/backend backend=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG -n default"
                             echo 'Imagen actualizada en el deployment de EKS.'
 
-                            // Esperar a que se complete el rollout
                             sh 'kubectl rollout status deployment/backend -n default'
+
+                            // Eliminar pods en estado Terminating si existen
+                            sh '''
+                                TERMINATING=$(kubectl get pods -n default | grep Terminating | awk '{print $1}')
+                                if [ ! -z "$TERMINATING" ]; then
+                                    echo "Forzando eliminación de pods en estado Terminating..."
+                                    for pod in $TERMINATING; do
+                                        kubectl delete pod $pod --grace-period=0 --force -n default
+                                    done
+                                else
+                                    echo "No hay pods en estado Terminating."
+                                fi
+                            '''
                         }
                     }
                 }
